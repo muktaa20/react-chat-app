@@ -2,7 +2,7 @@ import React from 'react'
 import logo from "../../assets/logo.png";
 import menu_icon from "../../assets/menu_icon.png";
 import search_icon from "../../assets/search_icon.png";
-import profile_img from "../../assets/img1.jpg"; // example → use correct file
+import profile_img from "../../assets/profile_richard.png"; 
 import './LeftSidebar.css'
 const LeftSidebar = () => {
   return (
@@ -12,6 +12,11 @@ const LeftSidebar = () => {
         <img src={logo} className='logo' alt="" />
         <div className="menu">
            <img src={menu_icon} alt="" />
+           <div className="sub-menu">
+            <p>Edit Profile</p>
+            <hr />
+            <p>Logout</p>
+           </div>
         </div>
       </div>
       <div className="ls-search">
@@ -20,13 +25,15 @@ const LeftSidebar = () => {
       </div>
      </div>
      <div className="ls-list">
-      <div className="friends">
+     {Array(12).fill("").map((item,index)=>(
+       <div key={index} className="friends">
         <img src={profile_img} alt="" />
         <div>
           <p>Mukta Suryavanshi</p>
-          <p>Hello how are you.</p>
+          <span>Hello how are you.</span>
         </div>
       </div>
+     ))}
      </div>
     </div>
   )
