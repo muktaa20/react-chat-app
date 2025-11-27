@@ -1,51 +1,57 @@
-import { createContext, useRef, useState } from "react";
+import { createContext, useState } from "react";
+import { supabase } from "../config/supabase";
 import { useNavigate } from "react-router-dom";
 
-export const AppContext = createContext()
+export const AppContext = createContext();
 
-const AppContextProvider = (props) => {
-const navigate = useNavigate
-     const[userData, setUserData] = useState(null);
-     const [chatData, setChatData] = useState(null)
+const AppContextProvider = ({ children }) => {
+const navigate = useNavigate();
+const [userData, setUserData] = useState(null);
 
-    const loadUserData = async (uid) => {
-        try{
-            const userRef = doc(db, 'users',uid);
-            const userSnap = await getDoc(useRef);
-            const userData = userSnap.data()
-            // console.log(userSnap);
-            //  console.log(userData);
-            setUserData(userData);
-             if(userData.avatar && userData.name) {
-                navigate('/chat')
-             }            
-             else{
-                navigate('/profile')
-             }
-             await updateDoc(useRef,{
-                lastSeen:Date.now()
-             })
-             setInterval(async() => {
-                if (auth.chatUser) {
-                    await updateDoc(useRef,{
-                       lastSeen:Date.now() 
-                    })
-                }
-             }, interval);
-        } catch(error){
+// Load user profile from Supabase
+const loadUserData = async (uid) => {
+const { data, error } = await supabase
+.from("users")
+.select("*")
+.eq("id", uid)
+.single();
 
-        }
-    }
-
-    const value = {
-            userData,setUserData,
-            chatData,setChatData,
-            loadUserData
-    }
-    return(
-        <AppContext.Provider value={value}>
-               {props.children}
-        </AppContext.Provider>
-    )
+if (!error) {
+  setUserData(data);
+  navigate(data.avatar && data.name ? "/chat" : "/profile");
 }
-export default AppContextProvider
+
+};
+
+return (
+<AppContext.Provider value={{ userData, setUserData, loadUserData }}>
+{children}
+</AppContext.Provider>
+);
+};
+
+export default AppContextProvider;
+
+// useEffect(() => {
+//    if(userData){
+//     const chatRef = doc(db,'chat',userData.id);
+//     const unSub = onSnapshot(chatRef, async(res) =>{
+//       const chatItems = res.data().chatsData;
+//       const tempData = [];
+//       for(const item of chatItems){
+//          const userRef = doc(db,'user',item.rId);
+//          const userSnap = await getDoc(userRef);
+//          const userData = userSnap.data()
+//          tempData.push({...item,userData})
+//       }
+//       setChatData(tempData.sort((a,b) => b.updatedAt - a.updatedAt))
+//     })
+//     return () => {
+//       unSub()
+//     }
+//    }
+// },[userData])
+
+// const value = {
+//    userData,setUserData
+// }

@@ -6,136 +6,130 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../../config/supabase";
 
 const ProfileUpdate = () => {
-const navigate = useNavigate();
-const [name, setName] = useState("");
-const [bio, setBio] = useState("");
-const [image, setImage] = useState(null);
-const [avatarUrl, setAvatarUrl] = useState("");
+  const navigate = useNavigate();
+  const [name, setName] = useState("");
+  const [bio, setBio] = useState("");
+  const [image, setImage] = useState(null);
+  const [avatarUrl, setAvatarUrl] = useState("");
 
-// Fetch user profile
-useEffect(() => {
-const loadData = async () => {
-const { data: session } = await supabase.auth.getSession();
-const user = session?.session?.user;
+  useEffect(() => {
+    const loadData = async () => {
+      const { data: session } = await supabase.auth.getSession();
+      const user = session?.session?.user;
 
+      if (!user) {
+        navigate("/");
+        return;
+      }
 
-  if (!user) {
-    navigate("/");
-    return;
-  }
+      const { data, error } = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", user.id)
+        .single();
 
-  const { data, error } = await supabase
-    .from("users")
-    .select("*")
-    .eq("id", user.id)
-    .single();
+      if (!error && data) {
+        setName(data.name || "");
+        setBio(data.bio || "");
+        setAvatarUrl(data.avatar || "");
+      }
+    };
 
-  if (!error && data) {
-    setName(data.name || "");
-    setBio(data.bio || "");
-    setAvatarUrl(data.avatar || "");
-  }
-};
+    loadData();
+  }, [navigate]);
 
-loadData();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
+    let finalImageUrl = avatarUrl;
 
-}, []);
+    if (image) {
+      const fileName = `avatars/${Date.now()}-${image.name}`;
 
-const handleSubmit = async (e) => {
-e.preventDefault();
+      const { error: uploadError } = await supabase.storage
+        .from("images")
+        .upload(fileName, image, { upsert: true });
 
+      if (uploadError) {
+        alert("Image upload failed!");
+        return;
+      }
 
-let finalImageUrl = avatarUrl;
+      const { data } = supabase.storage
+        .from("images")
+        .getPublicUrl(fileName);
 
-// Upload new image if selected
-if (image) {
-  const fileName = `avatars/${Date.now()}-${image.name}`;
+      finalImageUrl = data.publicUrl;
+    }
 
-  const { error: uploadError } = await supabase.storage
-    .from("images")
-    .upload(fileName, image, { upsert: true });
+    const { data: session } = await supabase.auth.getSession();
+    const user = session?.session?.user;
 
-  if (uploadError) {
-    alert("Image upload failed!");
-    return;
-  }
+    const { error: updateError } = await supabase
+      .from("users")
+      .update({
+        name,
+        bio,
+        avatar: finalImageUrl,
+      })
+      .eq("id", user.id);
 
-  const { data } = supabase.storage
-    .from("images")
-    .getPublicUrl(fileName);
+    if (updateError) {
+      alert("Profile update failed!");
+      return;
+    }
 
-  finalImageUrl = data.publicUrl;
-}
+    alert("Profile updated successfully!");
+    navigate("/chat");
+  };
 
-const { data: session } = await supabase.auth.getSession();
-const user = session?.session?.user;
+  return (
+    <div className="profile">
+      <div className="profile-container">
+        <form onSubmit={handleSubmit}>
+          <h3>Profile Details</h3>
 
-const { error: updateError } = await supabase
-  .from("users")
-  .update({
-    name,
-    bio,
-    avatar: finalImageUrl,
-  })
-  .eq("id", user.id);
+          <label htmlFor="avatar">
+            <input
+              onChange={(e) => setImage(e.target.files[0])}
+              type="file"
+              id="avatar"
+              accept=".png,.jpg,.jpeg"
+              hidden
+            />
+            <img
+              src={image ? URL.createObjectURL(image) : avatarUrl || avatar_icon}
+              alt="profile"
+            />
+            Upload profile image
+          </label>
 
-if (updateError) {
-  alert("Profile update failed!");
-  return;
-}
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            type="text"
+            placeholder="Your name"
+            required
+          />
 
-alert("Profile updated successfully!");
-navigate("/chat");
+          <textarea
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            placeholder="Write profile bio"
+            required
+          ></textarea>
 
+          <button type="submit">Save</button>
+        </form>
 
-};
-
-return ( <div className="profile"> <div className="profile-container"> <form onSubmit={handleSubmit}> <h3>Profile Details</h3>
-
-      <label htmlFor="avatar">
-        <input
-          onChange={(e) => setImage(e.target.files[0])}
-          type="file"
-          id="avatar"
-          accept=".png,.jpg,.jpeg"
-          hidden
-        />
         <img
-          src={image ? URL.createObjectURL(image) : avatarUrl || avatar_icon}
-          alt="profile"
+          className="profile-pic"
+          src={image ? URL.createObjectURL(image) : avatarUrl || logo_icon}
+          alt=""
         />
-        Upload profile image
-      </label>
-
-      <input
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        type="text"
-        placeholder="Your name"
-        required
-      />
-
-      <textarea
-        value={bio}
-        onChange={(e) => setBio(e.target.value)}
-        placeholder="Write profile bio"
-        required
-      ></textarea>
-
-      <button type="submit">Save</button>
-    </form>
-
-    <img
-      className="profile-pic"
-      src={image ? URL.createObjectURL(image) : avatarUrl || logo_icon}
-      alt=""
-    />
-  </div>
-</div>
-
-
-);
+      </div>
+    </div>
+  );
 };
 
 export default ProfileUpdate;

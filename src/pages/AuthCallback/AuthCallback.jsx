@@ -4,10 +4,10 @@ import { supabase } from "../../config/supabase";
 const AuthCallback = () => {
   useEffect(() => {
     const handleConfirm = async () => {
-      const { data, error } = await supabase.auth.getSession();
+      const { data } = await supabase.auth.getSession();
       console.log("callback session:", data);
 
-      window.location.href = "/"; 
+      window.location.href = "/";
     };
 
     handleConfirm();
@@ -17,3 +17,4 @@ const AuthCallback = () => {
 };
 
 export default AuthCallback;
+

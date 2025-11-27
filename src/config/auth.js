@@ -1,70 +1,82 @@
 import { supabase } from "./supabase";
 
 // ---------------------- SIGNUP ---------------------- //
-const signup = async (username, email, password) => {
-  try {
-    // 1. Create auth user
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: "http://localhost:5173/auth/callback",
-      },
-    });
+export const signup = async (username, email, password) => {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: "http://localhost:5173/auth/callback",
+      data: { username }
+    },
+  });
 
-    if (error) throw error;
-    const user = data.user;
-
-    // 2. Insert profile row in "users" table
-    const { error: insertErr } = await supabase.from("users").insert([
-      {
-        id: user.id,
-        username: username.toLowerCase(),
-        email,
-        name: "",
-        avatar: "",
-        bio: "Hey, there I am using chat app",
-        lastSeen: Date.now(),
-      },
-    ]);
-
-    if (insertErr) throw insertErr;
-
-    alert("Verification email sent! Please verify then login.");
-    return data;
-  } catch (err) {
-    console.error(err);
-    throw err;
+  if (error) {
+    // If user already exists → show message
+    if (error.message.includes("already registered")) {
+      throw new Error("Email already registered! Please login.");
+    }
+    throw error;
   }
+
+  const user = data.user;
+
+  // ⛔ If email already exists but unverified → user.id = null hota hai
+  if (!user?.id) return data;
+
+  // Store user profile only first time
+  const { error: insertErr } = await supabase.from("users").insert([
+    {
+      id: user.id,
+      username,
+      email,
+      name: "",
+      avatar: "",
+      bio: "Hey! I’m using the chat app.",
+      lastSeen: Date.now(),
+    },
+  ]);
+
+  if (insertErr) throw insertErr;
+
+  return data;
 };
 
 // ---------------------- LOGIN ---------------------- //
-const login = async (email, password) => {
+export const login = async (email, password) => {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+  if (error) throw error;
+  return data;
+};
+
+// ---------------------- LOGOUT ---------------------- //
+// import { supabase } from "./supabase";
+
+export const logout = async () => {
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    // 1. Sign out from Supabase
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error("Logout error:", error.message);
+      return;
+    }
 
-    if (error) throw error;
+    // 2. Clear localStorage (optional)
+    localStorage.removeItem("user");
 
-    return data;
-  } catch (error) {
-    console.error("Login error:", error);
-    alert(error.message);
-    throw error;
+    // 3. Redirect to login
+    window.location.href = "/profile";
+    
+  } catch (err) {
+    console.error("Logout failed:", err);
   }
 };
 
-const logout = async () => {
-  try {
-    await supabase.auth.signOut();
-  } catch (error) {
-    alert(error.message);
-  }
-};
 
-export { signup, login, logout };
+
 
 // import { supabase } from "./supabase";
 
