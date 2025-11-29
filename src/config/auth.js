@@ -7,12 +7,11 @@ export const signup = async (username, email, password) => {
     password,
     options: {
       emailRedirectTo: "http://localhost:5173/auth/callback",
-      data: { username }
+      data: { username },
     },
   });
 
   if (error) {
-    // If user already exists → show message
     if (error.message.includes("already registered")) {
       throw new Error("Email already registered! Please login.");
     }
@@ -21,10 +20,10 @@ export const signup = async (username, email, password) => {
 
   const user = data.user;
 
-  // ⛔ If email already exists but unverified → user.id = null hota hai
+  // If email unverified → user.id null hota hai
   if (!user?.id) return data;
 
-  // Store user profile only first time
+  // Insert user profile first time only
   const { error: insertErr } = await supabase.from("users").insert([
     {
       id: user.id,
@@ -33,7 +32,7 @@ export const signup = async (username, email, password) => {
       name: "",
       avatar: "",
       bio: "Hey! I’m using the chat app.",
-      lastSeen: Date.now(),
+      lastSeen: new Date().toISOString(), // FIXED
     },
   ]);
 
@@ -53,27 +52,20 @@ export const login = async (email, password) => {
 };
 
 // ---------------------- LOGOUT ---------------------- //
-// import { supabase } from "./supabase";
-
 export const logout = async () => {
   try {
-    // 1. Sign out from Supabase
     const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error("Logout error:", error.message);
-      return;
-    }
+    if (error) throw error;
 
-    // 2. Clear localStorage (optional)
-    localStorage.removeItem("user");
+    localStorage.clear();
 
-    // 3. Redirect to login
-    window.location.href = "/profile";
-    
+    // Correct redirect
+    window.location.href = "/login";
   } catch (err) {
-    console.error("Logout failed:", err);
+    console.error("Logout failed:", err.message);
   }
 };
+
 
 
 
