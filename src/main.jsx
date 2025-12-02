@@ -11,6 +11,4 @@ createRoot(document.getElementById('root')).render(
          <App />
     </AppContextProvider>
  </BrowserRouter>
-  
-
 )

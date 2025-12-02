@@ -25,7 +25,6 @@
   cursor: pointer;
 }
 
-/* Search box */
 .ls-search {
   background: #002570;
   display: flex;
@@ -58,7 +57,7 @@
   overflow-y: scroll;
 }
 
-/* Friends (chat user list) */
+
 .friends {
   display: flex;
   align-items: center;
@@ -120,3 +119,11 @@
 .menu:hover .sub-menu{
   display: block;
 }
+.friends .border img{
+  border: 3px solid #07fff3;
+}
+.friends .border div span{
+  color: #07fff3;
+}
+
+

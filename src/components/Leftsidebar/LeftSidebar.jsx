@@ -113,13 +113,15 @@ import { useNavigate } from "react-router-dom";
 import { logout } from "../../config/auth.js"; 
 import { supabase } from "../../config/supabase.js";
 import { AppContext } from "../../context/AppContext"; // ADD THIS
+import { toast } from "react-toastify";
 
 const LeftSidebar = () => {
   const navigate = useNavigate();
   const { userData } = useContext(AppContext);
 
-  const [searchValue, setSearchValue] = useState("");
-  const [users, setUsers] = useState([]);
+  // const [searchValue, setSearchValue] = useState("");
+  const [users, setUsers] = useState(null)
+  // const [users, setUsers] = useState([]);
   const [showSearch, setShowSearch] = useState(false);
 
   // ------------------ SEARCH USERS ------------------ //
@@ -151,6 +153,43 @@ const LeftSidebar = () => {
     setUsers(filtered);
   };
 
+  const addChat = async () =>{
+     const messagesRef = collection(db,"messages");
+     const chatsRef = collection(db,"chats");
+     try {
+      const newMessagesRef = doc(messagesRef)
+
+      await setDoc(newMessagesRef,{
+        createAt:serverTimestamp(),
+        messages:[]
+      })
+
+      await updateDoc(doc(chatsRef,user.id),{
+        chatsData:arrayUnion({
+          messageId:newMessageRef.id,
+          lastMessage:"",
+          rId:userData.id,
+          updateAt:Date.now(),
+          messageSeen:true
+        })
+      })
+
+      await updateDoc(doc(chatsRef,userData.id),{
+        chatsData:arrayUnion({
+          messageId:newMessageRef.id,
+          lastMessage:"",
+          rId:user.id,
+          updateAt:Date.now(),
+          messageSeen:true
+        })
+      })
+     } catch (error) {
+      toast.error(error.message)
+      console.error(error);
+      
+     }
+  }
+
   return (
     <div className="ls">
       <div className="ls-top">
@@ -181,7 +220,7 @@ const LeftSidebar = () => {
       <div className="ls-list">
         {showSearch && users.length > 0
           ? users.map((user) => (
-              <div key={user.id} className="friends add-user">
+              <div onClick={addChat} key={user.id} className="friends add-user">
                 <img src={user.avatar || profile_img} alt="" />
                 <p>{user.username}</p>
               </div>
@@ -192,7 +231,7 @@ const LeftSidebar = () => {
                 <div key={index} className="friends">
                   <img src={profile_img} alt="" />
                   <div>
-                    <p>Demo User</p>
+                    <p>mukta</p>
                     <span>Hey! How are you?</span>
                   </div>
                 </div>
@@ -203,4 +242,3 @@ const LeftSidebar = () => {
 };
 
 export default LeftSidebar;
-

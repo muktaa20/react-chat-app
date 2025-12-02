@@ -96,12 +96,7 @@ return ( <div className="login"> <img className="logo" src={assets.logo_big} alt
     </div>
   </form>
 </div>
-
-
 );
 };
 
 export default Login;
-
-
-

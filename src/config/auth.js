@@ -1,29 +1,29 @@
 import { supabase } from "./supabase";
 
-// ---------------------- SIGNUP ---------------------- //
+// ------------------ SIGNUP ------------------ //
 export const signup = async (username, email, password) => {
+  // First check if email already exists in auth
+  const { data: existingUser, error: existErr } = await supabase
+    .from("users")
+    .select("email")
+    .eq("email", email)
+    .single();
+
+  if (existingUser) {
+    throw new Error("Email already exists! Please login.");
+  }
+
+  // Create auth user
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: {
-      emailRedirectTo: "http://localhost:5173/auth/callback",
-      data: { username },
-    },
   });
 
-  if (error) {
-    if (error.message.includes("already registered")) {
-      throw new Error("Email already registered! Please login.");
-    }
-    throw error;
-  }
+  if (error) throw error;
 
   const user = data.user;
 
-  // If email unverified → user.id null hota hai
-  if (!user?.id) return data;
-
-  // Insert user profile first time only
+  // Insert into users profile table
   const { error: insertErr } = await supabase.from("users").insert([
     {
       id: user.id,
@@ -31,8 +31,9 @@ export const signup = async (username, email, password) => {
       email,
       name: "",
       avatar: "",
-      bio: "Hey! I’m using the chat app.",
-      lastSeen: new Date().toISOString(), // FIXED
+      bio: "Hey! I am using chat app.",
+     lastSeen: Date.now(),   // int8 number
+
     },
   ]);
 
@@ -41,30 +42,30 @@ export const signup = async (username, email, password) => {
   return data;
 };
 
-// ---------------------- LOGIN ---------------------- //
+// ------------------ LOGIN ------------------ //
 export const login = async (email, password) => {
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
-  if (error) throw error;
+
+  if (error) {
+    if (error.message.includes("Invalid login credentials")) {
+      throw new Error("Invalid Email or Password!");
+    }
+    throw error;
+  }
+
   return data;
 };
 
-// ---------------------- LOGOUT ---------------------- //
+// ------------------ LOGOUT ------------------ //
 export const logout = async () => {
-  try {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-
-    localStorage.clear();
-
-    // Correct redirect
-    window.location.href = "/login";
-  } catch (err) {
-    console.error("Logout failed:", err.message);
-  }
+  await supabase.auth.signOut();
+  localStorage.clear();
+  window.location.href = "/";
 };
+
 
 
 
