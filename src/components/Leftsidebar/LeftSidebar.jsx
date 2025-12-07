@@ -1,456 +1,243 @@
-// import React, { useContext, useState, useEffect } from "react";
-// import logo from "../../assets/logo.png";
-// import menu_icon from "../../assets/menu_icon.png";
-// import search_icon from "../../assets/search_icon.png";
-// import profile_img from "../../assets/profile_richard.png";
-// import "./LeftSidebar.css";
-// import { useNavigate } from "react-router-dom";
-// import { logout } from "../../config/auth.js";
-// import { supabase } from "../../config/supabase.js";
-// import { AppContext } from "../../context/AppContext";
-// import { toast } from "react-toastify";
-
-// const LeftSidebar = () => {
-//   const navigate = useNavigate();
-//   const { userData } = useContext(AppContext);
-
-//   const [users, setUsers] = useState([]);
-//   const [chatList, setChatList] = useState([]); // persisted list
-//   const [showSearch, setShowSearch] = useState(false);
-//   const [searchValue, setSearchValue] = useState("");
-
-//   const getSignedUrl = async (filePath) => {
-//     if (!filePath) return null;
-
-//     try {
-//       // Remove full URL prefix if user.avatar contains a public URL
-//       let cleanPath = filePath;
-
-//       // case 1: full supabase URL → keep only path after "/public/"
-//       if (cleanPath.includes("/storage/v1/object/public/")) {
-//         cleanPath = cleanPath.split("/storage/v1/object/public/")[1];
-//       }
-
-//       // case 2: ensure no bucket prefix duplication
-//       cleanPath = cleanPath.replace(/^images\//, "");
-
-//       const { data, error } = await supabase.storage
-//         .from("images")
-//         .createSignedUrl(cleanPath, 3600);
-
-//       if (error) {
-//         console.log("Signed URL Error:", error.message);
-//         return null;
-//       }
-
-//       return data.signedUrl;
-//     } catch (err) {
-//       console.log("Signed URL Catch:", err);
-//       return null;
-//     }
-//   };
-
-//   // ----------------- Load saved chat list from Supabase -----------------
-//   const loadChatList = async () => {
-//     if (!userData?.id) return;
-
-//     try {
-//       // 1) get chat_user_ids saved for this user
-//       const { data: rows, error: rowsErr } = await supabase
-//         .from("chat_list")
-//         .select("chat_user_id")
-//         .eq("user_id", userData.id)
-//         .order("created_at", { ascending: false });
-
-//       if (rowsErr) {
-//         console.log("chat_list fetch error:", rowsErr);
-//         return;
-//       }
-
-//       const ids = rows.map((r) => r.chat_user_id);
-//       if (ids.length === 0) {
-//         setChatList([]);
-//         return;
-//       }
-
-//       // 2) fetch user details for those ids
-//       const { data: usersData, error: usersErr } = await supabase
-//         .from("users")
-//         .select("id, username, avatar")
-//         .in("id", ids);
-
-//       if (usersErr) {
-//         console.log("users fetch error:", usersErr);
-//         return;
-//       }
-
-//       // 3) convert avatars to signed urls
-//       const parsed = await Promise.all(
-//         usersData.map(async (u) => ({
-//           id: u.id,
-//           username: u.username,
-//           avatar: u.avatar ? await getSignedUrl(u.avatar) : null,
-//         }))
-//       );
-
-//       // keep original order as in ids (most recent first)
-//       const ordered = ids
-//         .map((id) => parsed.find((p) => p.id === id))
-//         .filter(Boolean);
-
-//       setChatList(ordered);
-//     } catch (err) {
-//       console.error("loadChatList catch:", err);
-//     }
-//   };
-
-//   useEffect(() => {
-//     loadChatList();
-//   }, [userData]);
-
-//   // ----------------- SEARCH USERS -----------------
-//   const inputHandler = async (e) => {
-//     const value = e.target.value.trim();
-//     setSearchValue(value);
-
-//     if (value === "") {
-//       setShowSearch(false);
-//       setUsers([]);
-//       return;
-//     }
-
-//     setShowSearch(true);
-
-//     const { data, error } = await supabase
-//       .from("users")
-//       .select("id, username, name, avatar")
-//       .ilike("username", `%${value}%`);
-
-//     if (error) {
-//       console.log(error);
-//       return;
-//     }
-
-//     const filtered = data.filter((u) => u.id !== userData?.id);
-
-//     const usersWithImages = await Promise.all(
-//       filtered.map(async (u) => ({
-//         ...u,
-//         avatar: u.avatar ? await getSignedUrl(u.avatar) : null,
-//       }))
-//     );
-
-//     setUsers(usersWithImages);
-//   };
-
-//   // --------------- Add user to chat list (persist in Supabase) ---------------
-//   // const addChat = async (user) => {
-//   //   if (!user || !user.id || !userData?.id) return;
-
-//   //   // prevent local duplicates
-//   //   if (chatList.find((u) => u.id === user.id)) {
-//   //     toast.info("User already in chat list");
-//   //     // still clear search
-//   //     setShowSearch(false);
-//   //     setSearchValue("");
-//   //     setUsers([]);
-//   //     return;
-//   //   }
-
-//   //   try {
-//   //     // insert into DB (if unique constraint exists this will error; we catch it)
-//   //     const { error: insertErr } = await supabase.from("chat_list").insert([
-//   //       {
-//   //         user_id: userData.id,
-//   //         chat_user_id: user.id,
-//   //       },
-//   //     ]);
-
-//   //     if (insertErr) {
-//   //       // if it's a uniqueness error, it's fine — still add locally
-//   //       console.log("chat_list insert error (non-fatal):", insertErr.message);
-//   //     }
-
-//   //     // update local state immediately (most recent first)
-//   //     setChatList((prev) => [user, ...prev]);
-
-//   //     toast.success("User added to chat list!");
-
-//   //     // clear search UI
-//   //     setShowSearch(false);
-//   //     setSearchValue("");
-//   //     setUsers([]);
-//   //   } catch (err) {
-//   //     console.error("addChat catch:", err);
-//   //     toast.error("Could not add user");
-//   //   }
-//   // };
-
-//  const addChat = async (user) => {
-//   if (!user || !user.id || !userData?.id) return;
-
-//   if (chatList.find((u) => u.id === user.id)) {
-//     toast.info("User already in chat list");
-//     setShowSearch(false);
-//     setSearchValue("");
-//     setUsers([]);
-//     return;
-//   }
-
-//   try {
-//     const { error: insertErr } = await supabase.from("chat_list").insert([
-//       {
-//         user_id: userData.id,
-//         chat_user_id: user.id,
-//       },
-//     ]);
-
-//     if (insertErr) {
-//       console.log("Insert failed:", insertErr.message);
-//       toast.error("Failed to add chat: " + insertErr.message);
-//       return;
-//     }
-
-//     setChatList((prev) => [user, ...prev]);
-//     toast.success("User added to chat list!");
-
-//     setShowSearch(false);
-//     setSearchValue("");
-//     setUsers([]);
-//   } catch (err) {
-//     console.error("addChat catch:", err);
-//     toast.error("Could not add user");
-//   }
-// };
-
-//   return (
-//     <div className="ls">
-//       <div className="ls-top">
-//         <div className="ls-nav">
-//           <img src={logo} className="logo" alt="" />
-
-//           <div className="menu">
-//             <img src={menu_icon} alt="" />
-
-//             <div className="sub-menu">
-//               <p onClick={() => navigate("/profile")}>Edit Profile</p>
-//               <hr />
-//               <p onClick={logout}>Logout</p>
-//             </div>
-//           </div>
-//         </div>
-
-//         <div className="ls-search">
-//           <img src={search_icon} alt="" />
-//           <input
-//             onChange={inputHandler}
-//             type="text"
-//             placeholder="Search here.."
-//             value={searchValue}
-//           />
-//         </div>
-//       </div>
-
-//       <div className="ls-list">
-//         {showSearch && users.length > 0
-//           ? users.map((user) => (
-//               <div
-//                 onClick={() => addChat(user)}
-//                 key={user.id}
-//                 className="friends add-user"
-//               >
-//                 <img src={user.avatar || profile_img} alt="" />
-//                 <p>{user.username}</p>
-//               </div>
-//             ))
-//           : // only show users you added; if none, show nothing (no dummy)
-//             chatList.map((user) => (
-//               <div key={user.id} className="friends">
-//                 <img src={user.avatar || profile_img} alt="" />
-//                 <div>
-//                   <p>{user.username}</p>
-//                   <span>Start chatting...</span>
-//                 </div>
-//               </div>
-//             ))}
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default LeftSidebar;
-
-
-import React, { useContext, useState, useEffect } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import logo from "../../assets/logo.png";
 import menu_icon from "../../assets/menu_icon.png";
 import search_icon from "../../assets/search_icon.png";
 import profile_img from "../../assets/profile_richard.png";
 import "./LeftSidebar.css";
+
 import { useNavigate } from "react-router-dom";
-import { logout } from "../../config/auth.js";
-import { supabase } from "../../config/supabase.js";
+import { supabase } from "../../config/supabase";
 import { AppContext } from "../../context/AppContext";
+import { logout } from "../../config/auth";
 import { toast } from "react-toastify";
 
 const LeftSidebar = () => {
   const navigate = useNavigate();
-  const { userData } = useContext(AppContext);
+  const {
+    userData,
+    chatData,
+    setChatUser,
+    setMessagesId,
+    loadChatsForUser,
+    getSignedUrl,
+  } = useContext(AppContext);
 
-  const [users, setUsers] = useState([]);
-  const [chatList, setChatList] = useState([]);
-  const [showSearch, setShowSearch] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchUsers, setSearchUsers] = useState([]);
+  const [localChatList, setLocalChatList] = useState([]);
 
-  // ----------------- Signed URL generator -----------------
-  const getSignedUrl = async (filePath) => {
-    if (!filePath) return null;
-
-    try {
-      let cleanPath = filePath;
-
-      if (cleanPath.includes("/storage/v1/object/public/")) {
-        cleanPath = cleanPath.split("/storage/v1/object/public/")[1];
-      }
-
-      cleanPath = cleanPath.replace(/^images\//, "");
-
-      const { data, error } = await supabase.storage
-        .from("images")
-        .createSignedUrl(cleanPath, 3600);
-
-      if (error) {
-        console.log("Signed URL error:", error.message);
-        return null;
-      }
-
-      return data.signedUrl;
-    } catch (err) {
-      console.log("Signed URL catch:", err);
-      return null;
-    }
-  };
-
-  // ----------------- LOAD CHAT LIST -----------------
-  const loadChatList = async () => {
-    if (!userData?.id) return;
-
-    try {
-      const { data: rows, error } = await supabase
-        .from("chat_list")
-        .select("chat_user_id")
-        .eq("user_id", userData.id)
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        console.log("chat_list fetch error:", error.message);
+  // Convert chatData entries to enriched list (with username, avatar)
+  useEffect(() => {
+    const enrich = async () => {
+      if (!chatData || chatData.length === 0) {
+        setLocalChatList([]);
         return;
       }
-
-      const ids = rows.map((row) => row.chat_user_id);
-
+      const ids = chatData.map((c) => c.rId).filter(Boolean);
       if (ids.length === 0) {
-        setChatList([]);
+        setLocalChatList([]);
         return;
       }
 
-      const { data: usersData } = await supabase
+      const { data: users } = await supabase
         .from("users")
-        .select("id, username, avatar")
+        .select("id, username, avatar, name")
         .in("id", ids);
-
       const parsed = await Promise.all(
-        usersData.map(async (u) => ({
+        users.map(async (u) => ({
           id: u.id,
-          username: u.username,
+          username: u.username || u.name || "Unknown",
           avatar: u.avatar ? await getSignedUrl(u.avatar) : null,
         }))
       );
 
-      const ordered = ids
-        .map((id) => parsed.find((p) => p.id === id))
+      // align order same as chatData (most recent first already)
+      const aligned = ids
+        .map((id) => {
+          const meta = parsed.find((p) => p.id === id) || {
+            id,
+            username: "Unknown",
+            avatar: null,
+          };
+          const conv = chatData.find((c) => c.rId === id);
+          return {
+            ...meta,
+            messagesId: conv?.messagesId,
+            lastMessage: conv?.lastMessage,
+            updatedAt: conv?.updatedAt,
+            messageSeen: conv?.messageSeen,
+            raw: conv,
+          };
+        })
         .filter(Boolean);
 
-      setChatList(ordered);
-    } catch (err) {
-      console.log("loadChatList catch:", err);
-    }
-  };
+      setLocalChatList(aligned);
+    };
 
-  useEffect(() => {
-    loadChatList();
-  }, [userData]);
+    enrich();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatData]);
 
-  // ----------------- SEARCH USERS -----------------
+  // Search users (exclude current user)
   const inputHandler = async (e) => {
-    const value = e.target.value.trim();
+    const value = e.target.value;
     setSearchValue(value);
 
-    if (value === "") {
+    if (!value || value.trim() === "") {
       setShowSearch(false);
-      setUsers([]);
+      setSearchUsers([]);
       return;
     }
 
     setShowSearch(true);
-
     const { data, error } = await supabase
       .from("users")
-      .select("id, username, avatar")
-      .ilike("username", `%${value}%`);
+      .select("id, username, avatar, name")
+      .ilike("username", `%${value}%`)
+      .limit(10);
 
     if (error) {
-      console.log(error.message);
+      console.error(error);
       return;
     }
 
     const filtered = data.filter((u) => u.id !== userData?.id);
-
-    const withImages = await Promise.all(
+    const parsed = await Promise.all(
       filtered.map(async (u) => ({
-        ...u,
+        id: u.id,
+        username: u.username || u.name || "Unknown",
         avatar: u.avatar ? await getSignedUrl(u.avatar) : null,
       }))
     );
 
-    setUsers(withImages);
+    setSearchUsers(parsed);
   };
 
-  // ----------------- ADD CHAT -----------------
-  const addChat = async (user) => {
-    if (!user || !user.id || !userData?.id) return;
+  // Add user to chat list (create conversation entry for both users)
+  // const addChat = async (u) => {
+  //   if (!userData?.id) return;
+  //   try {
+  //     // create a messagesId
+  //     const messagesId = `${userData.id}_${u.id}_${Date.now()}`;
 
-    if (chatList.find((u) => u.id === user.id)) {
-      toast.info("Already in chat list");
-      setShowSearch(false);
-      setSearchValue("");
-      setUsers([]);
+  //     // fetch current chats row for user and other user
+  //     const { data: meRow } = await supabase.from("chats").select("chatData").eq("id", userData.id).single();
+  //     const { data: otherRow } = await supabase.from("chats").select("chatData").eq("id", u.id).single();
+
+  //     let meArr = Array.isArray(meRow?.chatData) ? meRow.chatData : [];
+  //     let otherArr = Array.isArray(otherRow?.chatData) ? otherRow.chatData : [];
+
+  //     // avoid duplicates
+  //     if (meArr.find((c) => c.rId === u.id)) {
+  //       toast.info("Already in chat list");
+  //       setShowSearch(false);
+  //       setSearchValue("");
+  //       setSearchUsers([]);
+  //       return;
+  //     }
+
+  //     const convForMe = {
+  //       rId: u.id,
+  //       messagesId,
+  //       lastMessage: "",
+  //       updatedAt: Date.now(),
+  //       messageSeen: true,
+  //       messages: [],
+  //     };
+  //     const convForOther = {
+  //       rId: userData.id,
+  //       messagesId,
+  //       lastMessage: "",
+  //       updatedAt: Date.now(),
+  //       messageSeen: false,
+  //       messages: [],
+  //     };
+
+  //     meArr = [convForMe, ...meArr];
+  //     otherArr = [convForOther, ...otherArr];
+
+  //     // upsert both rows
+  //     await supabase.from("chats").upsert([{ id: userData.id, chatData: meArr }]);
+  //     await supabase.from("chats").upsert([{ id: u.id, chatData: otherArr }]);
+
+  //     toast.success("Chat added");
+  //     setShowSearch(false);
+  //     setSearchValue("");
+  //     setSearchUsers([]);
+  //     // reload chats
+  //     loadChatsForUser();
+  //   } catch (err) {
+  //     console.error(err);
+  //     toast.error(err.message || "Failed to add chat");
+  //   }
+  // };
+
+const addChat = async (otherUser) => {
+  try {
+    
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth?.user) return;
+
+    const userId = auth.user.id;
+
+    // 1️⃣ Check if chat already exists
+    const { data: existing, error: existingErr } = await supabase
+      .from("userchats")
+      .select("chat_id")
+      .or(`and(user_id.eq.${userId},other_user_id.eq.${otherUser.id}),and(user_id.eq.${otherUser.id},other_user_id.eq.${userId})`)
+      .maybeSingle();
+
+    if (existing) {
+      console.log("Chat already exists → opening it");
+      // load chat page
+      setMessagesId(existing.chat_id);
+      setChatUser({ userData: otherUser, rId: otherUser.id });
       return;
     }
 
-    try {
-      const { error } = await supabase.from("chat_list").insert([
-        {
-          user_id: userData.id,
-          chat_user_id: user.id,
-        },
-      ]);
+    // 2️⃣ Create chat row
+    const { data: chat, error: chatErr } = await supabase
+      .from("chats")
+      .insert({})
+      .select()
+      .single();
 
-      if (error) {
-        toast.error("Insert failed: " + error.message);
-        return;
-      }
+    if (chatErr) throw chatErr;
 
-      setChatList((prev) => [user, ...prev]);
-      toast.success("User added!");
+    // 3️⃣ Link both users
+    const { error: linkErr } = await supabase.from("userchats").insert([
+      { user_id: userId, other_user_id: otherUser.id, chat_id: chat.id },
+      { user_id: otherUser.id, other_user_id: userId, chat_id: chat.id }
+    ]);
 
-      setShowSearch(false);
-      setSearchValue("");
-      setUsers([]);
-    } catch (err) {
-      console.log("addChat error:", err);
-      toast.error("Something went wrong");
-    }
+    if (linkErr) throw linkErr;
+
+    toast.success("Chat created!");
+
+    // open the chat UI
+    setMessagesId(chat.id);
+    setChatUser({ userData: otherUser, rId: otherUser.id });
+
+  } catch (err) {
+    console.error("addChat() ERROR:", err);
+    toast.error("Failed to create chat");
+  }
+};
+
+
+
+
+
+
+  // select a conversation
+  const openChat = (item) => {
+    // item contains id (other user id) and messagesId
+    setMessagesId(item.messagesId);
+    setChatUser({
+      userData: { id: item.id, username: item.username, avatar: item.avatar },
+      rId: item.id,
+    });
   };
 
   return (
@@ -461,7 +248,6 @@ const LeftSidebar = () => {
 
           <div className="menu">
             <img src={menu_icon} alt="" />
-
             <div className="sub-menu">
               <p onClick={() => navigate("/profile")}>Edit Profile</p>
               <hr />
@@ -473,36 +259,39 @@ const LeftSidebar = () => {
         <div className="ls-search">
           <img src={search_icon} alt="" />
           <input
-            onChange={inputHandler}
             type="text"
             placeholder="Search here.."
             value={searchValue}
+            onChange={inputHandler}
           />
         </div>
       </div>
 
+      {/* ---------------- LIST ---------------- */}
       <div className="ls-list">
-        {showSearch && users.length > 0 ? (
-          users.map((user) => (
-            <div
-              onClick={() => addChat(user)}
-              key={user.id}
-              className="friends add-user"
-            >
-              <img src={user.avatar || profile_img} alt="" />
-              <p>{user.username}</p>
-            </div>
-          ))
-        ) : (
-          chatList.map((user) => (
-            <div key={user.id} className="friends">
-              <img src={user.avatar || profile_img} alt="" />
-              <div>
-                <p>{user.username}</p>
-                <span>Start chatting...</span>
+        {showSearch ? (
+          <div className="search-results">
+            {searchUsers.length === 0 && <p>No users found</p>}
+            {searchUsers.map((u) => (
+              <div key={u.id} className="friends" onClick={() => addChat(u)}>
+                <img src={u.avatar || profile_img} alt="" />
+                <p>{u.username}</p>
               </div>
-            </div>
-          ))
+            ))}
+          </div>
+        ) : (
+          <>
+            {localChatList.length === 0 && <p>No chats yet</p>}
+            {localChatList.map((u) => (
+              <div key={u.id} className="friends" onClick={() => openChat(u)}>
+                <img src={u.avatar || profile_img} alt="" />
+                <p>{u.username}</p>
+                <small className="last-msg">{u.lastMessage}</small>
+              </div>
+            ))}
+           
+
+          </>
         )}
       </div>
     </div>
