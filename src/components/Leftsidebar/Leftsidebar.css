@@ -125,5 +125,12 @@
 .friends .border div span{
   color: #07fff3;
 }
+.last-msg {
+  color: #ccc;
+}
 
+.last-msg.unread {
+  color: #1aff1a;   
+  font-weight: bold;
+}
 
