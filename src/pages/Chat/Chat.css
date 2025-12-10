@@ -17,4 +17,12 @@
     color: white;
     
 }
- 
+  @media (max-screen:900px){
+    .chat-container{
+        display: flex;
+    }
+    .loading{
+        font-size: 30px;
+    }
+    
+  }

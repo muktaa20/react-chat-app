@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import "./Login.css";
 import assets from "../../assets/assets";
-import { signup, login } from "../../config/auth";
+import { signup, login, resetPass} from "../../config/auth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
@@ -17,13 +17,13 @@ const Login = () => {
 
     try {
       if (currState === "Sign up") {
-        await signup(userName, email, password);
+        signup(userName, email, password);
         toast.success("Account created successfully! Please login.");
-        setCurrState("Login");
+        // setCurrState("Login");
       } else {
-        await login(email, password);
+         login(email, password);
         toast.success("Login successful!");
-        navigate("/chat");
+        // navigate("/chat");
       }
     } catch (error) {
       toast.error(error.message);
@@ -86,6 +86,11 @@ const Login = () => {
               <span onClick={() => setCurrState("Sign up")}>Click here</span>
             </p>
           )}
+
+          {currState === "Login" ?  <p className="login-toggle">
+             Forgot Password
+              <span onClick={() => setCurrState("Sign up")}>Reset Password ?<span onClick={()=> resetPass(email)}> reset here</span></span> 
+            </p>: null}
         </div>
       </form>
     </div>

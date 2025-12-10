@@ -1,3 +1,4 @@
+import { toast } from "react-toastify";
 import { supabase } from "./supabase";
 
 // ---------------- SIGNUP ---------------- //
@@ -50,6 +51,29 @@ export const login = async (email, password) => {
   if (error) throw error;
   return data;
 };
+
+// ---------------- Reset Password ---------------- //
+export const resetPass = async (email) => {
+  if(!email){
+    toast.error("Enter your email");
+    return null
+  }
+  try {
+    const userRef = collection(db,'users');
+    const q = query(userRef,where("email","==",email))
+    const querySnap = await getDoc(q);
+    if (!querySnap.empty) {
+      await sendPasswordResetEmail(auth,email)
+      toast.success("Reset email send")
+    }
+    else{
+      toast.error("Email not exists")
+    }
+  } catch (error) {
+    console.error(error)
+    toast.error(error.message)
+  }
+}
 
 // ------------------ LOGOUT ------------------ //
 export const logout = async () => {

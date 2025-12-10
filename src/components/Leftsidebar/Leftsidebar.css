@@ -119,12 +119,6 @@
 .menu:hover .sub-menu{
   display: block;
 }
-.friends .border img{
-  border: 3px solid #07fff3;
-}
-.friends .border div span{
-  color: #07fff3;
-}
 .last-msg {
   color: #ccc;
 }
@@ -132,5 +126,10 @@
 .last-msg.unread {
   color: #1aff1a;   
   font-weight: bold;
+}
+@media (max-width:900px){
+  .ls{
+    width: 100%;
+  }
 }
 
