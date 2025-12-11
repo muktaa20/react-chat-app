@@ -59,7 +59,7 @@
 import React, { useContext, useEffect, useState } from "react";
 import profile_img from "../../assets/profile_richard.png";
 import green_dot from "../../assets/green_dot.png";  // ADD THIS
-import "./RightSidebar.css";
+import "./Rightsidebar.css";
 
 import { logout } from "../../config/auth";
 import { AppContext } from "../../context/AppContext";
