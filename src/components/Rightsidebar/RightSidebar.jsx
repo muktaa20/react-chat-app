@@ -68,14 +68,10 @@ const RightSidebar = () => {
   const { chatUser, messages } = useContext(AppContext);
   const [msgImages, setMsgImages] = useState([]);
 
-  // ----------------------------
-  // EXTRACT ONLY IMAGES FROM MESSAGES
-  // ----------------------------
+  const user = chatUser?.userData || {};   // <-- FIXED HERE
+
   useEffect(() => {
-    if (!messages || messages.length === 0) {
-      setMsgImages([]);
-      return;
-    }
+    if (!messages || messages.length === 0) return setMsgImages([]);
 
     const extracted = messages
       .filter((msg) => msg.image)
@@ -83,8 +79,6 @@ const RightSidebar = () => {
 
     setMsgImages(extracted);
   }, [messages]);
-
-  // ----------------------------
 
   if (!chatUser) {
     return (
@@ -94,20 +88,16 @@ const RightSidebar = () => {
     );
   }
 
-  const user = chatUser.userData || {};
-
   return (
     <div className="rs">
-      {/* USER PROFILE */}
       <div className="rs-profile">
 
         <img src={user.avatar || profile_img} alt="" />
 
         <h3>
-          {/* ACTIVE DOT IF LAST SEEN < 70 seconds */}
-          {user.lastSeen && Date.now() - user.lastSeen <= 70000 ? (
+          {user.lastSeen && Date.now() - user.lastSeen <= 70000 && (
             <img className="dot" src={green_dot} alt="" />
-          ) : null}
+          )}
 
           {user.username || user.name || "Unknown"}
         </h3>
@@ -117,21 +107,14 @@ const RightSidebar = () => {
 
       <hr />
 
-      {/* MEDIA SECTION */}
       <div className="rs-media">
         <p>Media</p>
-
         <div>
           {msgImages.length === 0 ? (
-            <p style={{ opacity: 0.6 }}>No media found</p>
+            <p style={{ opacity: 0.6 }}>No media</p>
           ) : (
             msgImages.map((url, index) => (
-              <img
-                key={index}
-                src={url}
-                alt=""
-                onClick={() => window.open(url)}
-              />
+              <img key={index} src={url} onClick={() => window.open(url)} />
             ))
           )}
         </div>
@@ -141,5 +124,6 @@ const RightSidebar = () => {
     </div>
   );
 };
+
 
 export default RightSidebar;
