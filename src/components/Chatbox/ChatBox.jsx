@@ -10,8 +10,9 @@ import logo from "../../assets/logo_icon.png";
 import { AppContext } from "../../context/AppContext";
 import { toast } from "react-toastify";
 import { supabase } from "../../config/supabase";
+import MessageItem from "./MessageItem";
 
-const ChatBox = () => {
+const ChatBox = ({ onHelpClick }) => {
   const {
     userData,
     chatUser,
@@ -27,10 +28,77 @@ const ChatBox = () => {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
+  const [replyMessage, setReplyMessage] = useState(null);
+  const [searchMsgValue, setSearchMsgValue] = useState("");
 
-  /* ------------------------------
-       1. LOAD MESSAGES
-  ------------------------------- */
+  /* EDIT MESSAGE */
+  const handleEditMessage = async (msg, newText) => {
+    if (!newText.trim()) return;
+
+    const updated = messages.map((m) =>
+      m.createdAt === msg.createdAt ? { ...m, text: newText } : m
+    );
+
+    await updateMessagesForBoth(updated);
+  };
+
+  /* DELETE FOR ME */
+  const handleDeleteMessage = async (msg) => {
+    const updated = messages.filter((m) => m.createdAt !== msg.createdAt);
+    await updateMessagesForMe(updated);
+  };
+
+  /* DELETE FOR EVERYONE */
+  const handleDeleteForEveryone = async (msg) => {
+    const updated = messages.map((m) =>
+      m.createdAt === msg.createdAt
+        ? { ...m, text: "This message was deleted" }
+        : m
+    );
+    await updateMessagesForBoth(updated);
+  };
+
+  const updateMessagesForBoth = async (updatedMessages) => {
+    const meId = userData.id;
+    const rId = chatUser.rId;
+
+    const [{ data: me }, { data: other }] = await Promise.all([
+      supabase.from("chats").select("chatData").eq("id", meId).maybeSingle(),
+      supabase.from("chats").select("chatData").eq("id", rId).maybeSingle(),
+    ]);
+
+    const updateConv = (arr) =>
+      arr.map((c) =>
+        c.messagesId === messagesId ? { ...c, messages: updatedMessages } : c
+      );
+
+    await supabase.from("chats").upsert([
+      { id: meId, chatData: updateConv(me.chatData) },
+      { id: rId, chatData: updateConv(other.chatData) },
+    ]);
+
+    setMessages(updatedMessages);
+  };
+
+  const updateMessagesForMe = async (updatedMessages) => {
+    const meId = userData.id;
+
+    const { data } = await supabase
+      .from("chats")
+      .select("chatData")
+      .eq("id", meId)
+      .maybeSingle();
+
+    const updated = data.chatData.map((c) =>
+      c.messagesId === messagesId ? { ...c, messages: updatedMessages } : c
+    );
+
+    await supabase.from("chats").upsert([{ id: meId, chatData: updated }]);
+
+    setMessages(updatedMessages);
+  };
+
+  /*    LOAD MESSAGES  */
   useEffect(() => {
     const loadMessages = async () => {
       if (!messagesId || !userData?.id) return;
@@ -52,9 +120,8 @@ const ChatBox = () => {
     loadMessages();
   }, [messagesId, userData]);
 
-  /* ------------------------------
-       2. SEND TEXT
-  ------------------------------- */
+  //  2. SEND TEXT
+
   const onSend = async () => {
     if (!input.trim() || !messagesId) return;
 
@@ -64,12 +131,14 @@ const ChatBox = () => {
       image: null,
       imageSigned: null,
       createdAt: Date.now(),
+      replyTo: replyMessage || null,
     };
 
     try {
       setSending(true);
       await updateBothUsers(msgObj, input.trim());
       setInput("");
+      setReplyMessage(null);
     } catch {
       toast.error("Failed to send");
     } finally {
@@ -77,36 +146,33 @@ const ChatBox = () => {
     }
   };
 
-  /* ------------------------------
-       3. SEND IMAGE
-  ------------------------------- */
+  //  3. SEND IMAGE
+
   const onSendImage = async (e) => {
-  const file = e.target.files?.[0];
-  console.log(file);
-    
-  if (!file) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  try {
-    const filePath = await uploadImage(file);
-    const signedUrl = await getSignedUrl(filePath);
+    try {
+      const filePath = await uploadImage(file);
+      const signedUrl = await getSignedUrl(filePath);
 
-    const msgObj = {
-      sId: userData.id,
-      text: "",
-      image: filePath,
-      imageSigned: signedUrl,
-      createdAt: Date.now(),
-    };
+      const msgObj = {
+        sId: userData.id,
+        text: "",
+        image: filePath,
+        imageSigned: signedUrl,
+        createdAt: Date.now(),
+        replyTo: replyMessage || null,
+      };
 
-    await updateBothUsers(msgObj, "Image");
-  } catch {
-    toast.error("Image upload failed");
-  }
-};
+      await updateBothUsers(msgObj, "Image");
+      setReplyMessage(null);
+    } catch {
+      toast.error("Image upload failed");
+    }
+  };
 
-  /* ------------------------------
-       4. UPDATE BOTH USERS
-  ------------------------------- */
+  //  4. UPDATE BOTH USERS
   const updateBothUsers = async (msgObj, lastMsgDisplay) => {
     const meId = userData.id;
     const rId = chatUser.rId;
@@ -149,9 +215,7 @@ const ChatBox = () => {
     setMessages([...meConv.messages]);
   };
 
-  /* ------------------------------
-       5. FORMAT TIME
-  ------------------------------- */
+  //  5. FORMAT TIME
   const formatTime = (ts) => {
     if (!ts) return "";
     const d = new Date(ts);
@@ -162,9 +226,15 @@ const ChatBox = () => {
     return `${h}:${m} ${ampm}`;
   };
 
-  /* ------------------------------
-       WELCOME PAGE
-  ------------------------------- */
+  //  FILTER MESSAGES BY SEARCH
+
+  const filteredMessages = searchMsgValue
+    ? messages.filter((m) =>
+        m.text.toLowerCase().includes(searchMsgValue.toLowerCase())
+      )
+    : messages;
+
+  //  WELCOME PAGE
   if (!chatUser) {
     return (
       <div className={`chat-welcome ${chatVisible ? "" : "hidden"}`}>
@@ -174,9 +244,6 @@ const ChatBox = () => {
     );
   }
 
-  /* ------------------------------
-       MAIN CHAT UI
-  ------------------------------- */
   return (
     <div className={`chat-box ${chatVisible ? "" : "hidden"}`}>
       {/* HEADER */}
@@ -199,8 +266,14 @@ const ChatBox = () => {
           </p>
           <span className="username">{chatUser.userData.username}</span>
         </div>
+        <img
+          src={help_icon}
+          className="help"
+          alt="help"
+          onClick={onHelpClick}
+          style={{ cursor: "pointer" }}
+        />
 
-        <img src={help_icon} className="help" alt="" />
         <img
           onClick={() => setChatVisible(false)}
           src={arrow_icon}
@@ -209,38 +282,31 @@ const ChatBox = () => {
         />
       </div>
 
+      {/* REPLY PREVIEW */}
+      {replyMessage && (
+        <div className="reply-preview">
+          Replying to: {replyMessage.text || "Image"}
+          <span onClick={() => setReplyMessage(null)}>×</span>
+        </div>
+      )}
+
       {/* MESSAGES */}
       <div className="chat-msg">
-        {(!messages || messages.length === 0) && <p className="no-msg"></p>}
+        {(!filteredMessages || filteredMessages.length === 0) && (
+          <p className="no-msg"></p>
+        )}
 
-        {messages.map((msg, i) => (
-          <div key={i} className={msg.sId === userData.id ? "s-msg" : "r-msg"}>
-            {msg.image ? (
-              <img
-                src={msg.imageSigned}
-                className="sent-image"
-                alt=""
-                onClick={() => setPreviewImage(msg.imageSigned)}
-              />
-            ) : (
-              // <img src={msg.imageSigned} className="sent-image" alt="" />
-              <p className="msg">{msg.text}</p>
-            )}
-
-            <div className="msg-meta">
-              <img
-                src={
-                  msg.sId === userData.id
-                    ? userData.avatarSigned || profile_img
-                    : chatUser.userData.avatarSigned ||
-                      chatUser.userData.avatar ||
-                      profile_img
-                }
-                alt=""
-              />
-              <p>{formatTime(msg.createdAt)}</p>
-            </div>
-          </div>
+        {filteredMessages.map((msg, i) => (
+          <MessageItem
+            key={i}
+            msg={msg}
+            userId={userData.id}
+            formatTime={formatTime}
+            onEdit={handleEditMessage}
+            onDelete={handleDeleteMessage}
+            onDeleteForEveryone={handleDeleteForEveryone}
+            setPreviewImage={setPreviewImage}
+          />
         ))}
       </div>
 
@@ -273,15 +339,16 @@ const ChatBox = () => {
           alt=""
         />
       </div>
-       {previewImage && (
-  <div className="image-preview-overlay">
-    <span className="close-btn" onClick={() => setPreviewImage(null)}>×</span>
 
-    <img src={previewImage} alt="preview" />
-  </div>
-)}
-
-
+      {/* IMAGE PREVIEW */}
+      {previewImage && (
+        <div className="image-preview-overlay">
+          <span className="close-btn" onClick={() => setPreviewImage(null)}>
+            ×
+          </span>
+          <img src={previewImage} alt="preview" />
+        </div>
+      )}
     </div>
   );
 };
