@@ -112,7 +112,11 @@ const AppContextProvider = ({ children }) => {
       }
     );
 
-    return () => listener.subscription.unsubscribe();
+    // return () => listener.subscription.unsubscribe();
+    return () => {
+  listener?.subscription?.unsubscribe();
+};
+
   }, []);
 
   // ---------------------- Load Chats ----------------------
