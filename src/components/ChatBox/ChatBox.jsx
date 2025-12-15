@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from "react";
-import "./ChatBox.css";
+// import "./ChatBox.css";
 import profile_img from "../../assets/profile_richard.png";
 import green_dot from "../../assets/green_dot.png";
 import help_icon from "../../assets/help_icon.png";
@@ -10,7 +10,10 @@ import logo from "../../assets/logo_icon.png";
 import { AppContext } from "../../context/AppContext";
 import { toast } from "react-toastify";
 import { supabase } from "../../config/supabase";
-import MessageItem from "./MessageItem";
+// import MessageItem from "./MessageItem";
+import MessageItem from "./MessageItem.jsx";
+import "./ChatBox.css";
+
 
 const ChatBox = ({ onHelpClick }) => {
   const {
