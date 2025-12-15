@@ -3,7 +3,9 @@ import logo from "../../assets/logo.png";
 import menu_icon from "../../assets/menu_icon.png";
 import search_icon from "../../assets/search_icon.png";
 import profile_img from "../../assets/profile_richard.png";
+// import "./LeftSidebar.css";
 import "./LeftSidebar.css";
+
 
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../config/supabase";
